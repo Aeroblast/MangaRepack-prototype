@@ -1,0 +1,8 @@
+*.zip
+temp
+*.epub
+[*
+bin
+obj
+.vscode
+vips
