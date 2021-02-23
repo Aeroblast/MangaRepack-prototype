@@ -25,9 +25,9 @@ namespace MangaRepack
     {
         const string opf_template =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-        + "<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" unique-identifier=\"uuid\">\n"
-        + "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n{0}</metadata>\n"
-        + "<manifest>\n{1}</manifest>\n<spine page-progression-direction=\"rtl\">\n{2}</spine>\n</package>";
+        + "<package xmlns=\"http://www.idpf.org/2007/opf\" version=\"3.0\" prefix=\"rendition: http://www.idpf.org/vocab/rendition/#\" unique-identifier=\"uuid\">\n"
+        + "  <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n{0}  </metadata>\n"
+        + "  <manifest>\n{1}  </manifest>\n  <spine page-progression-direction=\"rtl\">\n{2}  </spine>\n</package>";
         const string nav_template =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">\n"
         + "<head><title>TOC</title></head>\n<body>\n<nav epub:type=\"toc\">\n    <ol>\n{0}    </ol>\n</nav>\n</body>\n</html>";
@@ -64,14 +64,24 @@ namespace MangaRepack
                 StringBuilder innerNavOl = new StringBuilder();
                 List<string> navEntries = new List<string>();
 
+                //Standard
                 innerMetadata.Append($"    <dc:identifier id=\"uuid\">{System.Guid.NewGuid()}</dc:identifier>\n");
                 innerMetadata.Append($"    <dc:language>{options.language}</dc:language>\n");
-                innerMetadata.Append(Utils.GetMetaFromFileName(Path.GetFileNameWithoutExtension(inputPath)));
                 innerMetadata.Append("    <meta property=\"dcterms:modified\">" + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ") + "</meta>\n");
+                innerMetadata.Append($"\n{Utils.GetMetaFromFileName(Path.GetFileNameWithoutExtension(inputPath))}\n");
+
+
+                //Following Apple Books Asset Guide
+                innerMetadata.Append("\n    <meta property=\"rendition:layout\">pre-paginated</meta>\n    <meta property=\"rendition:spread\">both</meta>");
+
+                //Sign
+                innerMetadata.Append("\n    <dc:contributor id=\"tool\">MangaRepack by AE</dc:contributor>\n    <meta refines=\"#tool\" property=\"role\" scheme=\"marc:relators\">bkp</meta>\n");
+
                 innerManifest.Append("    <item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>\n");
 
                 int chapterCount = 0;
                 bool coverSet = false;
+                bool pageSpreadOnLeft = false;
                 foreach (Source s in inputSource)
                 {
                     Source current = s;
@@ -89,7 +99,7 @@ namespace MangaRepack
 
                     string imagePath = "Images/" + Utils.Number(chapterCount, 2) + "_" + Utils.MapZipPath(path).Replace("/", "_");
                     string docPath = "Text/" + Path.GetFileNameWithoutExtension(imagePath) + ".xhtml";
-                    string id = "i-" + Path.GetFileNameWithoutExtension(imagePath);
+                    string id = Path.GetFileNameWithoutExtension(imagePath);
                     string mediaType = Utils.GetMediaType(imagePath);
                     string properties = "";
 
@@ -119,8 +129,7 @@ namespace MangaRepack
                         }
                     }
 
-
-                    var item = $"    <item id=\"{id}\" href=\"{imagePath}\" media-type=\"{mediaType}\" {properties}/>\n";
+                    var item = $"    <item id=\"i-{id}\" href=\"{imagePath}\" media-type=\"{mediaType}\" {properties}/>\n";
                     var item_xhtml = $"    <item id=\"x-{id}\" href=\"{docPath}\" media-type=\"application/xhtml+xml\" properties=\"svg\" />\n";
                     innerManifest.Append(item);
                     innerManifest2.Append(item_xhtml);
@@ -132,6 +141,22 @@ namespace MangaRepack
                         {
                             itemref = itemref.Insert(itemref.LastIndexOf("/>"), "linear=\"no\" ");
                         }
+                    }
+                    if (properties == "properties=\"cover-image\" ")
+                    {
+                        itemref = itemref.Insert(itemref.LastIndexOf("/>"), "properties=\"rendition:page-spread-center\" ");
+                    }
+                    else
+                    {
+                        if (pageSpreadOnLeft)
+                        {
+                            itemref = itemref.Insert(itemref.LastIndexOf("/>"), "properties=\"page-spread-left\" ");
+                        }
+                        else
+                        {
+                            itemref = itemref.Insert(itemref.LastIndexOf("/>"), "properties=\"page-spread-right\" ");
+                        }
+                        pageSpreadOnLeft = !pageSpreadOnLeft;
                     }
                     innerSpine.Append(itemref);
 
@@ -145,10 +170,7 @@ namespace MangaRepack
                 Utils.WriteTextToZip(epub, "OEBPS/manga.opf", string.Format(opf_template, innerMetadata, innerManifest, innerSpine));
                 Utils.WriteTextToZip(epub, "OEBPS/nav.xhtml", string.Format(nav_template, innerNavOl));
                 Utils.WriteTextToZip(epub, "META-INF/container.xml", container);
-
             }
-
-
         }
 
     }
