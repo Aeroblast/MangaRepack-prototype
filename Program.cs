@@ -15,7 +15,7 @@ namespace MangaRepack
         static void Main(string[] args)
         {
             Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            //args[0] = "";
+            //args[0] = @"";//quick debug
             if (args.Length > 0)
             {
                 string inputPath = args[0];

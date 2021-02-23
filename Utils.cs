@@ -4,17 +4,18 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-
+using System.Drawing;
+using System.Drawing.Imaging;
 namespace MangaRepack
 {
     class Utils
     {
-        public static void WriteTextToZip(ZipArchive zip, string entryName, string text)
+        public static void WriteTextToZip(ZipArchive zip, string entryName, string text, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
-            var zipEntry = zip.CreateEntry(entryName);
+            var zipEntry = zip.CreateEntry(entryName, compressionLevel);
             using (var zs = zipEntry.Open())
-            using (var sr = new StreamWriter(zs, Encoding.UTF8))
-                sr.Write(text);
+            using (var sr = new StreamWriter(zs))
+            { sr.Write(text); }
         }
         static Regex filenameMeta = new Regex("^(\\[(.*?)\\]){0,1}(.+?)(\\[(.*?)\\])*$");
         public static string GetMetaFromFileName(string filename)
@@ -96,6 +97,14 @@ namespace MangaRepack
             for (; e >= 0; e--) { if (str[e] == ' ' || str[e] == '\t' || str[e] == '\n' || str[e] == '\r') { } else break; }
             if (s <= e) return str.Substring(s, e - s + 1);
             else return "";
+        }
+
+        public static (int, int) GetImageSize(Source s)
+        {
+            using (var img = Image.FromStream(s.GetStream()))
+            {
+                return (img.Width, img.Height);
+            }
         }
     }
 }

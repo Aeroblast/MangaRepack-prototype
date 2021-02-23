@@ -18,7 +18,7 @@ namespace MangaRepack
         ///<summary>
         ///输出EPUB的语言
         ///</summary>
-        public string language = "zh-TW";
+        public string language = "zh-CN";//ja zh-CN zh-TW
         ///<summary>
         ///输入为ZIP压缩包时，压缩包使用的编码
         ///</summary>
