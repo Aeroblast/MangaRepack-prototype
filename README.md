@@ -5,6 +5,7 @@
 + iOS/iPadOS ComicShare：作为EPUB读取时，支持目录，右向左翻页（竖屏单页，横屏双页）。当作一般ZIP时，可以滚动，当然没目录。这App本来就全屏。
 + Kindle (使用kindlegen转换)：自动全屏，右向左翻页（竖屏单页，横屏双页）。只有Kindle横屏支持封面的rendition:center。
 + [自制PC EPUB阅读器](https://github.com/Aeroblast/AeroEpubViewer)：非标准支持。只能横向右向左全书滚动，支持目录。
+
 其他情况至少可以当作ZIP读吧……大概。
 
 ## 使用方法
