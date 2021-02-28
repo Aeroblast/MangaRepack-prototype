@@ -43,6 +43,13 @@ namespace MangaRepack
         + "    <svg style=\"margin:0;padding:0;\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100%\" height=\"100%\" viewBox=\"0 0 {1} {2}\">\n"
         + "      <image width=\"{1}\" height=\"{2}\" xlink:href=\"{0}\"/>\n"
         + "    </svg>\n  </div>\n</body>\n</html>";
+        const string xhtml_placeholder =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        + "<!DOCTYPE html>\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">"
+        + "<head>\n  <meta charset=\"UTF-8\"/>\n  <title>PlaceHolder</title>\n  <meta name=\"viewport\" content=\"width=1156, height=1618\" />\n</head>"
+        + "<body style=\"margin:0;padding:0;\">\n  <div>\n"
+        + "    <svg style=\"margin:0;padding:0;\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100%\" height=\"100%\" viewBox=\"0 0 1156 1618\">\n"
+        + "    </svg>\n  </div>\n</body>\n</html>";
         public static void GenEpub(List<Source> inputSource, string inputPath, PackupOptions options)
         {
             inputSource.Sort(options.sortMethed.Sort);
@@ -72,7 +79,7 @@ namespace MangaRepack
 
 
                 //Following Apple Books Asset Guide
-                innerMetadata.Append("\n    <meta property=\"rendition:layout\">pre-paginated</meta>\n    <meta property=\"rendition:spread\">both</meta>");
+                innerMetadata.Append("\n    <meta property=\"rendition:layout\">pre-paginated</meta>\n    <meta property=\"rendition:spread\">auto</meta>");
 
                 //Sign
                 innerMetadata.Append("\n    <dc:contributor id=\"tool\">MangaRepack by AE</dc:contributor>\n    <meta refines=\"#tool\" property=\"role\" scheme=\"marc:relators\">bkp</meta>\n");
@@ -81,7 +88,7 @@ namespace MangaRepack
 
                 int chapterCount = 0;
                 bool coverSet = false;
-                bool pageSpreadOnLeft = false;
+                bool pageSpreadOnLeft = options.firstPageSpreadOnLeft;
                 foreach (Source s in inputSource)
                 {
                     Source current = s;
@@ -107,6 +114,22 @@ namespace MangaRepack
                     {
                         var navOlLi = $"        <li><a href=\"{docPath}\">{navEntry}</a></li>\n";
                         innerNavOl.Append(navOlLi);
+                        if (AddPlaceHolder(inputSource, s, options.pageListSpreadOnLeft, pageSpreadOnLeft, coverSet))
+                        {
+                            string placeHoderPath = "Text/" + Path.GetFileNameWithoutExtension(imagePath) + "_p.xhtml"; ;
+                            innerManifest2.Append($"    <item id=\"x-{id}-p\" href=\"{placeHoderPath}\" media-type=\"application/xhtml+xml\" properties=\"svg\" />\n");
+                            if (pageSpreadOnLeft)
+                            {
+                                innerSpine.Append($"    <itemref idref=\"x-{id}-p\" properties=\"page-spread-left\"/>\n");
+                            }
+                            else
+                            {
+                                innerSpine.Append($"    <itemref idref=\"x-{id}-p\" properties=\"page-spread-right\"/>\n");
+                            }
+                            pageSpreadOnLeft = !pageSpreadOnLeft;
+
+                            Utils.WriteTextToZip(epub, "OEBPS/" + placeHoderPath, xhtml_placeholder);
+                        }
                     }
 
                     if (
@@ -165,12 +188,33 @@ namespace MangaRepack
                         current.GetStream().CopyTo(zs);
                     var (w, h) = Utils.GetImageSize(s);
                     Utils.WriteTextToZip(epub, "OEBPS/" + docPath, string.Format(xhtml_template, "../" + imagePath, w, h, "CONTENT"));
-                }
+
+
+                }//Ends of Loop: Source
                 innerManifest.Append(innerManifest2);
                 Utils.WriteTextToZip(epub, "OEBPS/manga.opf", string.Format(opf_template, innerMetadata, innerManifest, innerSpine));
                 Utils.WriteTextToZip(epub, "OEBPS/nav.xhtml", string.Format(nav_template, innerNavOl));
                 Utils.WriteTextToZip(epub, "META-INF/container.xml", container);
             }
+        }
+        static bool AddPlaceHolder(List<Source> sources, Source current, string[] pageListSpreadOnLeft, bool pageSpreadOnLeft, bool coverSet)
+        {
+            string dir = Path.GetDirectoryName(current.GetPath());
+            int currentIndex = sources.IndexOf(current);
+            for (int i = currentIndex; i < sources.Count; i++)
+            {
+                var s = sources[i];
+                var path = s.GetPath();
+                if (!path.StartsWith(dir)) break;
+                foreach (string page in pageListSpreadOnLeft)
+                {
+                    if (path.EndsWith(page))
+                    {
+                        return ((i - currentIndex) % 2) == ((pageSpreadOnLeft & coverSet) ? 1 : 0);
+                    }
+                }
+            }
+            return false;
         }
 
     }
