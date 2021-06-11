@@ -1,3 +1,9 @@
+# 此页面存放原型命令行程序MangaRepack。👉新的Web App版 [Manga Repack](https://github.com/Aeroblast/MangaRepack)
+
+
+
+以下是原来的README。
+
 # MangaRepack
 将漫画打包成EPUB。
 大概效果：
